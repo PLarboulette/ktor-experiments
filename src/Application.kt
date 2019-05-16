@@ -4,15 +4,20 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
+import io.ktor.auth.Authentication
+import io.ktor.auth.UserIdPrincipal
+import io.ktor.auth.authenticate
+import io.ktor.auth.basic
 import io.ktor.features.ContentNegotiation
 import io.ktor.jackson.jackson
+import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.response.respondText
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.routing
+import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import plarboulette.models.Hero
+import plarboulette.models.PostHero
 import java.util.*
 
 fun main(args: Array<String>) {
@@ -27,39 +32,41 @@ fun Application.module() {
         jackson {enable(SerializationFeature.INDENT_OUTPUT)}
     }
 
+    install(Authentication) {
+        basic {
+            realm = "heroes"
+            validate { if (it.name == "user" && it.password == "password") UserIdPrincipal("user") else null }
+        }
+    }
+
+
     routing {
         root()
     }
-
 }
 
-data class Hero (val name : String)
-
-val heroes = Collections.synchronizedList(mutableListOf(
-    Hero("Dark Vador"),
-    Hero("Luke Skylwalker"))
-)
+val heroes = mutableListOf<Hero>()
 
 fun Routing.root() {
     get ("/") {
-        call.respondText { "OK here" }
+        call.respondText { "Welcome here" }
     }
-    get ("/json") {
-        call.respond(mapOf("OK" to true))
-    }
-    get("/heroes") {
-        call.respond(
-            mapOf("heroes" to synchronized(heroes) {
-                heroes.toList()
-            })
-        )
-    }
-    get("/heroes-filtered") {
-        call.respond(
-            mapOf("heroes-filtered" to synchronized(heroes) {
-                heroes.filter { it.name.contains("Vador") }.toList()
-            })
-        )
+    route("/heroes") {
+        get {
+            call.respond(
+                mapOf("heroes" to synchronized(heroes) {
+                    heroes.toList()
+                })
+            )
+        }
+        authenticate {
+            post {
+                val hero = call.receive<PostHero>()
+                heroes += Hero(UUID.randomUUID(), hero.hero.name, hero.hero.age)
+                call.respond(mapOf("OK" to true))
+            }
+        }
+
     }
 }
 
