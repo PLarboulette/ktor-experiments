@@ -2,8 +2,18 @@ package plarboulette.models
 
 import java.util.*
 
-data class Hero (val id: UUID, val name: String, val age: Int)
+enum class Rank {
+    DEVELOPER,
+    ARCHITECT,
+    MANAGER,
+    DESIGNER,
+    VP
+}
 
-data class HeroInput (val name: String, val age: Int)
+data class Employee (val id: UUID, val same: String, val salary: Int, val rank: Rank)
 
-data class PostHero (val hero: HeroInput)
+// Input types
+
+data class EmployeeInput (val name: String, val salary: Int, val rank: Rank)
+
+data class PostEmployee (val employee: EmployeeInput)
