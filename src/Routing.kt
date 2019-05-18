@@ -5,7 +5,9 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.Try
 import io.ktor.application.call
+import io.ktor.auth.UserIdPrincipal
 import io.ktor.auth.authenticate
+import io.ktor.auth.principal
 import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
 import io.ktor.response.respond
@@ -33,7 +35,7 @@ fun Routing.root() {
     route("/employees") {
         get {
             val list = getEmployees(call.request.queryParameters["rank"])
-            call.respond(list)
+            call.respond(mapOf("employees" to list))
         }
         authenticate {
             post {
@@ -66,6 +68,21 @@ fun Routing.root() {
                 }
             }.toEither().mapLeft { e ->
                 call.respond(HttpStatusCode.InternalServerError, wrapperError(e.message))
+            }
+        }
+    }
+
+    route("/me") {
+        authenticate {
+            get {
+                // Let to get employee information about the connected user
+                val principal = call.principal<UserIdPrincipal>() ?: error("No principal")
+                when(val list = getEmployees(call.request.queryParameters["rank"])
+                    .find { it.name == principal.name }) {
+                    is Employee -> call.respond(HttpStatusCode.OK, mapOf("employee" to list))
+                    else -> call.respond(HttpStatusCode.NotFound)
+                }
+
             }
         }
     }

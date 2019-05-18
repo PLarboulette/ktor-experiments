@@ -9,12 +9,11 @@ import arrow.core.*
 val employees = mutableListOf<Employee>()
 
 
-fun getEmployees (rank: String?) : Map<String, List<Employee>> {
-    val list =  when (rank) {
+fun getEmployees (rank: String?): List<Employee> {
+    return when (rank) {
         is String -> employees.toList().filter { it.rank.toString() == rank }
         else ->  employees.toList()
     }
-    return  mapOf("employees" to synchronized(employees) { list })
 }
 
 

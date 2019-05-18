@@ -10,7 +10,7 @@ enum class Rank {
     VP
 }
 
-data class Employee (val id: UUID, val same: String, val salary: Int, val rank: Rank)
+data class Employee (val id: UUID, val name: String, val salary: Int, val rank: Rank)
 
 // Input types
 
