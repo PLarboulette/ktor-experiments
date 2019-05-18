@@ -33,7 +33,7 @@ fun Application.module() {
     install(Authentication) {
 
         /*basic {
-            realm = "heroes"
+            realm = "employees"
             validate { if (it.name == "user" && it.password == "password") UserIdPrincipal("user") else null }
         }*/
         jwt {

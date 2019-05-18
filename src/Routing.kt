@@ -23,6 +23,13 @@ fun Routing.root() {
         call.respondText { "Welcome here" }
     }
 
+    post("/login-jwt") {
+        val post = call.receive<LoginRegister>()
+        val user = users.getOrPut(post.user) { User(post.user, post.password) }
+        if (user.password != post.password) error("Invalid credentials")
+        call.respond(mapOf("token" to simpleJwt.sign(user.name)))
+    }
+
     route("/employees") {
         get {
             val list = getEmployees(call.request.queryParameters["rank"])
@@ -62,12 +69,4 @@ fun Routing.root() {
             }
         }
     }
-
-    post("/login-jwt") {
-        val post = call.receive<LoginRegister>()
-        val user = users.getOrPut(post.user) { User(post.user, post.password) }
-        if (user.password != post.password) error("Invalid credentials")
-        call.respond(mapOf("token" to simpleJwt.sign(user.name)))
-    }
-
 }
