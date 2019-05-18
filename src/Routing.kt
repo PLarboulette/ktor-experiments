@@ -25,10 +25,10 @@ fun Routing.root() {
         call.respondText { "Welcome here" }
     }
 
-    post("/login-jwt") {
+    post("/login") {
         val post = call.receive<LoginRegister>()
         val user = users.getOrPut(post.user) { User(post.user, post.password) }
-        if (user.password != post.password) error("Invalid credentials")
+        if (user.password != post.password) throw InvalidCredentialsException("Invalid credentials")
         call.respond(mapOf("token" to simpleJwt.sign(user.name)))
     }
 
@@ -76,6 +76,8 @@ fun Routing.root() {
         authenticate {
             get {
                 // Let to get employee information about the connected user
+                // For example, we have a user called test, this endpont returns only information
+                // about an employee called test too. The other employees are not returned
                 val principal = call.principal<UserIdPrincipal>() ?: error("No principal")
                 when(val list = getEmployees(call.request.queryParameters["rank"])
                     .find { it.name == principal.name }) {
