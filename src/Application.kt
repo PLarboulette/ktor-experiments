@@ -2,6 +2,7 @@ package plarboulette
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import io.ktor.application.Application
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.auth.Authentication
@@ -10,27 +11,41 @@ import io.ktor.auth.jwt.jwt
 import io.ktor.features.CORS
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.ktor.jackson.jackson
+import io.ktor.response.cacheControl
 import io.ktor.response.respond
+import io.ktor.response.respondTextWriter
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.broadcast
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.delay
+import plarboulette.models.InvalidCredentialsException
 import plarboulette.models.SimpleJWT
+import plarboulette.models.SseEvent
 
 fun main(args: Array<String>) {
-    embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
+    embeddedServer(Netty, port = 8080, module = Application::module)
+        .start(wait = true)
 }
-
-class InvalidCredentialsException(message: String) : RuntimeException(message)
-
-val simpleJwt = SimpleJWT("my-super-secret") // put it in config
 
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.module() {
+
+    val simpleJwt = SimpleJWT("my-super-secret") // put it in config
+
+    val channel = produce { // this: ProducerScope<SseEvent> ->
+        var n = 0
+        while (true) {
+            send(SseEvent("Server-side event $n"))
+            delay(1000)
+            n++
+        }
+    }.broadcast()
 
     install(ContentNegotiation) {
         jackson {enable(SerializationFeature.INDENT_OUTPUT)}
@@ -69,12 +84,25 @@ fun Application.module() {
     }
 
     routing {
-        root()
+        root(simpleJwt, channel)
     }
 }
 
-
-
-
-
-
+suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>) {
+    response.cacheControl(CacheControl.NoCache(null))
+    respondTextWriter(contentType = ContentType.Text.EventStream) {
+        for (event in events) {
+            if (event.id != null) {
+                write("id: ${event.id}\n")
+            }
+            if (event.event != null) {
+                write("event: ${event.event}\n")
+            }
+            for (dataLine in event.data.lines()) {
+                write("data: $dataLine\n")
+            }
+            write("\n")
+            flush()
+        }
+    }
+}

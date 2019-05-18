@@ -1,5 +1,8 @@
 # Ktor-experiments 
 
-This project is just to test Ktor web framework features. 
-
-It's just a CRUD API to manage a list of employees. 
+This goal of this project is just to test Ktor web framework features. 
+ 
+- CRUD API (to manage employees)
+- Basic Authentication and JWT 
+- Server-side events 
+- StatusPage to manage errors 
