@@ -17,3 +17,15 @@ data class Employee (val id: UUID, val same: String, val salary: Int, val rank: 
 data class EmployeeInput (val name: String, val salary: Int, val rank: Rank)
 
 data class PostEmployee (val employee: EmployeeInput)
+
+
+// --------------------------------------------
+class User(val name: String, val password: String)
+
+val users: MutableMap<String, User> = Collections.synchronizedMap(
+    listOf(User("test", "test"))
+        .associateBy { it.name }
+        .toMutableMap()
+)
+
+class LoginRegister(val user: String, val password: String)

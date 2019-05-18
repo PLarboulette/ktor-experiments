@@ -26,7 +26,11 @@ repositories {
     mavenLocal()
     jcenter()
     maven { url 'https://kotlin.bintray.com/ktor' }
+    maven { url "https://dl.bintray.com/arrow-kt/arrow-kt/" }
+
 }
+
+def arrow_version = "0.9.0"
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -37,5 +41,11 @@ dependencies {
     compile "io.ktor:ktor-auth:$ktor_version"
     compile "io.ktor:ktor-auth-jwt:$ktor_version"
     compile "io.ktor:ktor-jackson:$ktor_version"
+    compile "io.arrow-kt:arrow-core-data:$arrow_version"
+    compile "io.arrow-kt:arrow-core-extensions:$arrow_version"
+    compile "io.arrow-kt:arrow-syntax:$arrow_version"
+    compile "io.arrow-kt:arrow-typeclasses:$arrow_version"
+    compile "io.arrow-kt:arrow-extras-data:$arrow_version"
+    compile "io.arrow-kt:arrow-extras-extensions:$arrow_version"
     testCompile "io.ktor:ktor-server-tests:$ktor_version"
 }
