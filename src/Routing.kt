@@ -10,24 +10,32 @@ import io.ktor.auth.authenticate
 import io.ktor.auth.principal
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.response.respondText
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.post
-import io.ktor.routing.route
+import io.ktor.routing.*
+import io.ktor.sessions.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BroadcastChannel
 import plarboulette.models.*
 import java.util.*
+import io.ktor.websocket.*
+import io.ktor.http.cio.websocket.*
+import io.ktor.http.content.defaultResource
+import io.ktor.http.content.resources
+import io.ktor.http.content.static
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.*
+import plarboulette.services.*
 
+@ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi
-fun Routing.root(simpleJwt: SimpleJWT, channel: BroadcastChannel<SseEvent>) {
+fun Routing.root(simpleJwt: SimpleJWT, channel: BroadcastChannel<SseEvent>, chatService: ChatService) {
 
-    get ("/") {
+    /*get ("/") {
         call.respondText { "Welcome here" }
-    }
+    }*/
 
     post("/login") {
         val post = call.receive<LoginRegister>()
@@ -55,6 +63,10 @@ fun Routing.root(simpleJwt: SimpleJWT, channel: BroadcastChannel<SseEvent>) {
             // Kotlin version
             try {
                 val uuid = UUID.fromString(call.parameters["id"])
+                getEmployee(uuid).let {
+                    x -> call.respond(HttpStatusCode.OK, mapOf("data" to x))
+                }
+
                 when (val oEmployee: Employee? = getEmployee(uuid)) {
                     is Employee -> call.respond(HttpStatusCode.OK, mapOf("data" to oEmployee))
                     else -> call.respond(HttpStatusCode.NotFound, wrapperError("Employee doesn't exist."))
@@ -142,5 +154,41 @@ fun Routing.root(simpleJwt: SimpleJWT, channel: BroadcastChannel<SseEvent>) {
                     """.trimIndent(),
             contentType = ContentType.Text.Html
         )
+    }
+
+    static {
+        // This marks index.html from the 'web' folder in resources as the default file to serve.
+        defaultResource("index.html", "web")
+        // This serves files from the 'web' folder in the application resources.
+        resources("web")
+    }
+
+    webSocket("/ws") { // this: WebSocketSession ->
+
+        /**
+         * We received a message. Let's process it.
+         */
+
+        // First of all we get the session.
+        val session = call.sessions.get<ChatSession>()
+
+        // We check that we actually have a session. We should always have one,
+        // since we have defined an interceptor before to set one.
+        if (session == null) {
+            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
+            return@webSocket
+        }
+
+        chatService.memberJoin(session.id, this)
+
+        try {
+           incoming.consumeEach { frame ->
+                if (frame is Frame.Text) {
+                    chatService.receivedMessage(session.id, frame.readText())
+                }
+            }
+        } finally {
+            chatService.memberLeft(session.id, this)
+        }
     }
 }

@@ -1,10 +1,16 @@
-package plarboulette
+package plarboulette.services
 
 import plarboulette.models.Employee
 import plarboulette.models.PostEmployee
 import java.util.*
-import arrow.*
 import arrow.core.*
+import io.ktor.application.ApplicationCall
+import io.ktor.http.CacheControl
+import io.ktor.http.ContentType
+import io.ktor.response.cacheControl
+import io.ktor.response.respondTextWriter
+import kotlinx.coroutines.channels.ReceiveChannel
+import plarboulette.models.SseEvent
 
 val employees = mutableListOf<Employee>()
 
@@ -36,17 +42,25 @@ object ScalaVersion {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
 fun wrapperError (message: String?): Map<String, Map<String, String?>> {
     return mapOf("errors" to mapOf("message" to message))
+}
+
+suspend fun ApplicationCall.respondSse(events: ReceiveChannel<SseEvent>) {
+    response.cacheControl(CacheControl.NoCache(null))
+    respondTextWriter(contentType = ContentType.Text.EventStream) {
+        for (event in events) {
+            if (event.id != null) {
+                write("id: ${event.id}\n")
+            }
+            if (event.event != null) {
+                write("event: ${event.event}\n")
+            }
+            for (dataLine in event.data.lines()) {
+                write("data: $dataLine\n")
+            }
+            write("\n")
+            flush()
+        }
+    }
 }

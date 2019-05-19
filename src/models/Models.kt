@@ -34,3 +34,5 @@ class LoginRegister(val user: String, val password: String)
 class InvalidCredentialsException(message: String) : RuntimeException(message)
 
 data class SseEvent(val data: String, val event: String? = null, val id: String? = null)
+
+data class ChatSession(val id: String)
