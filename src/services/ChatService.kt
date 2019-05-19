@@ -90,7 +90,6 @@ class ChatService {
         val name = memberNames[sender] ?: sender
         val formatted = "[$name] $message"
 
-        // Sends this pre-formatted message to all the members in the server.
         broadcast(formatted)
 
         // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
@@ -126,7 +125,12 @@ class ChatService {
     private suspend fun List<WebSocketSession>.send(frame: Frame) {
         forEach {
             Try {
-                it.send(frame.copy())
+                if (memberNames.size == 1) {
+                    it.send(frame.copy())
+                    it.send("[Server] You are currently alone in the chat.")
+                } else {
+                    it.send(frame.copy())
+                }
             }.toEither().mapLeft { _ ->
                 it.close(CloseReason(CloseReason.Codes.PROTOCOL_ERROR, ""))
             }
